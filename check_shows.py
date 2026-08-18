@@ -83,19 +83,45 @@ def save_state(alerted: set[str]) -> None:
     STATE_FILE.write_text(json.dumps({"alerted_shows": sorted(alerted)}, indent=2))
 
 
-def fetch_sessions(date: str) -> list[Show]:
+def fetch_html(date: str) -> str:
     url = DISTRICT_BASE.format(date=date)
-    response = requests.get(
-        url,
-        headers=REQUEST_HEADERS,
-        timeout=30,
-        impersonate="chrome120",
-    )
-    response.raise_for_status()
+    try:
+        response = requests.get(
+            url,
+            headers=REQUEST_HEADERS,
+            timeout=30,
+            impersonate="chrome120",
+        )
+        response.raise_for_status()
+        return response.text
+    except requests.HTTPError as exc:
+        if exc.response is not None and exc.response.status_code == 403:
+            return fetch_html_playwright(url)
+        raise
+
+
+def fetch_html_playwright(url: str) -> str:
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch(headless=True)
+        page = browser.new_page(
+            user_agent=USER_AGENT,
+            locale="en-IN",
+        )
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_selector('script#__NEXT_DATA__', state="attached", timeout=30000)
+        html = page.content()
+        browser.close()
+        return html
+
+
+def fetch_sessions(date: str) -> list[Show]:
+    html = fetch_html(date)
 
     match = re.search(
         r'<script id="__NEXT_DATA__" type="application/json">(.*?)</script>',
-        response.text,
+        html,
         re.DOTALL,
     )
     if not match:
