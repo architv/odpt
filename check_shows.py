@@ -12,7 +12,7 @@ from datetime import datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-import requests
+from curl_cffi import requests
 
 IST = ZoneInfo("Asia/Kolkata")
 STATE_FILE = Path("last_state.json")
@@ -31,6 +31,12 @@ USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+REQUEST_HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-IN,en;q=0.9",
+    "Referer": "https://www.district.in/movies/bengaluru-movie-tickets",
+}
 
 QUIET_START = time(2, 0)
 QUIET_END = time(8, 0)
@@ -79,7 +85,12 @@ def save_state(alerted: set[str]) -> None:
 
 def fetch_sessions(date: str) -> list[Show]:
     url = DISTRICT_BASE.format(date=date)
-    response = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=30)
+    response = requests.get(
+        url,
+        headers=REQUEST_HEADERS,
+        timeout=30,
+        impersonate="chrome120",
+    )
     response.raise_for_status()
 
     match = re.search(
