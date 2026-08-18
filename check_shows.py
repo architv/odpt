@@ -85,19 +85,17 @@ def save_state(alerted: set[str]) -> None:
 
 def fetch_html(date: str) -> str:
     url = DISTRICT_BASE.format(date=date)
-    try:
-        response = requests.get(
-            url,
-            headers=REQUEST_HEADERS,
-            timeout=30,
-            impersonate="chrome120",
-        )
-        response.raise_for_status()
-        return response.text
-    except requests.HTTPError as exc:
-        if exc.response is not None and exc.response.status_code == 403:
-            return fetch_html_playwright(url)
-        raise
+    response = requests.get(
+        url,
+        headers=REQUEST_HEADERS,
+        timeout=30,
+        impersonate="chrome120",
+    )
+    if response.status_code == 403:
+        print(f"{date}: HTTP 403, retrying with Playwright", file=sys.stderr)
+        return fetch_html_playwright(url)
+    response.raise_for_status()
+    return response.text
 
 
 def fetch_html_playwright(url: str) -> str:
@@ -218,7 +216,7 @@ def main() -> int:
             shows = fetch_sessions(date)
             all_shows.extend(shows)
             print(f"{date}: found {len(shows)} show(s) at target cinema")
-        except requests.RequestException as exc:
+        except Exception as exc:
             print(f"{date}: fetch failed — {exc}", file=sys.stderr)
 
     new_shows = [show for show in all_shows if show.key not in alerted]
