@@ -1,58 +1,47 @@
-# Odyssey PVR Nexus Showtime Tracker
+# odpt — Odyssey PVR Nexus Showtime Tracker
 
-Polls [District.in](https://www.district.in) every 10 minutes for **The Odyssey** showtimes at **PVR Nexus (Formerly Forum), Koramangala** on Aug 21–23, 2026, and sends Telegram alerts for new showtimes.
+Polls [District.in](https://www.district.in) for **The Odyssey** showtimes at **PVR Nexus (Formerly Forum), Koramangala** on Aug 21–23, 2026, and sends Telegram alerts when new showtimes appear.
+
+Repo: https://github.com/architv/odpt
+
+## Why not GitHub Actions or your laptop?
+
+| Option | Problem |
+|--------|---------|
+| **GitHub Actions** | District.in blocks datacenter IPs (403) — doesn't work |
+| **Your laptop** | Script stops when Mac sleeps/shuts down — unreliable |
+
+**Recommended: Oracle Cloud free VM (Mumbai)** — always on, $0/month, Indian IP that District.in accepts.
+
+→ **[Oracle Cloud setup guide](docs/oracle-cloud.md)** (15 min one-time setup)
 
 ## Behaviour
 
-- Checks dates: **21, 22, 23 August 2026**
-- **Quiet hours:** no checks between 2:00–8:00 AM IST
-- **No duplicate alerts:** each showtime is notified once, ever
-- **Readable Telegram messages** with HTML formatting
+- Checks **Aug 21, 22, 23 2026**
+- **Quiet hours:** skips 2:00–8:00 AM IST
+- **No duplicate alerts** for the same showtime
+- HTML-formatted Telegram messages
 
-## Recommended: local Mac scheduler
-
-District.in blocks cloud datacenter IPs (including GitHub Actions), so the reliable deployment is a **local scheduler on your Mac**. The script already handles quiet hours and deduplication.
+## Quick deploy (Oracle Cloud VM)
 
 ```bash
-cd ~/Projects/odyssey-pvr-tracker
-chmod +x scripts/install-local-cron.sh
-./scripts/install-local-cron.sh
+ssh ubuntu@YOUR_VM_IP
+curl -fsSL https://raw.githubusercontent.com/architv/odpt/main/scripts/setup-oracle-vm.sh | sudo bash -s -- YOUR_BOT_TOKEN
 ```
 
-This installs a LaunchAgent that runs every 10 minutes. Your Mac needs to be awake; plug it in or disable sleep while tracking.
-
-Logs: `~/Projects/odyssey-pvr-tracker/tracker.log`
-
-Stop the scheduler:
+## Manual run (local testing)
 
 ```bash
-launchctl bootout gui/$(id -u)/com.archit.odyssey-pvr-tracker
-```
-
-## Manual run
-
-```bash
-cd ~/Projects/odyssey-pvr-tracker
-source .venv/bin/activate
-set -a; source .env; set +a
+git clone https://github.com/architv/odpt.git && cd odpt
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+export TELEGRAM_BOT_TOKEN="..." TELEGRAM_CHAT_ID="996147432"
 python check_shows.py
 ```
 
-Force a run during quiet hours:
-
-```bash
-BYPASS_QUIET_HOURS=1 python check_shows.py
-```
-
-## GitHub Actions (optional, currently blocked)
-
-A workflow is included at `.github/workflows/check.yml`, but District.in returns **403** from GitHub's datacenter IPs even with browser fallback. Secrets are configured on the repo if District changes this later.
-
-Repo: https://github.com/architv/odyssey-pvr-tracker
-
 ## Files
 
-- `check_shows.py` — main checker script
-- `scripts/install-local-cron.sh` — installs macOS LaunchAgent
-- `.github/workflows/check.yml` — optional cloud runner (blocked by District.in)
-- `last_state.json` — alerted show IDs (gitignored locally)
+- `check_shows.py` — checker + Telegram notifier
+- `scripts/setup-oracle-vm.sh` — one-shot VM installer
+- `docs/oracle-cloud.md` — full cloud setup guide
+- `.github/workflows/check.yml` — kept for reference (blocked by District.in)

@@ -1,4 +1,5 @@
 #!/bin/bash
+# OPTIONAL FALLBACK — only use if you can't set up Oracle Cloud.
 set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
