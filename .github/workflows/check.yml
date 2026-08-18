@@ -1,0 +1,35 @@
+name: Check Odyssey Showtimes
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/cache/restore@v4
+        with:
+          path: last_state.json
+          key: odyssey-pvr-nexus-state
+          restore-keys: odyssey-pvr-nexus-state
+
+      - run: pip install -r requirements.txt
+
+      - run: python check_shows.py
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+
+      - uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: last_state.json
+          key: odyssey-pvr-nexus-state
